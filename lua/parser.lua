@@ -47,8 +47,10 @@ function m:parseChunk()
         parsed = false
 
         if self:match("return") then
+            self:match("SEMICOLON")
             if self:available() then
                 local node = {type="return", values=self:parseExprList()}
+                self:match("SEMICOLON")
                 if self:available() then error("Return statement must be the last statement in the block") end
                 statements[#statements+1] = node
             else
@@ -77,8 +79,10 @@ function m:parseBlock(token_type, ...)
         parsed = false
 
         if self:match("return") then
+            self:match("SEMICOLON")
             if not self:tokenOneOf(self:peek(), token_type, ...) then
                 local node = {type="return", values=self:parseExprList()}
+                self:match("SEMICOLON")
                 if not self:tokenOneOf(self:peek(), token_type, ...) then error("Return statement must be the last statement in the block") end
                 statements[#statements+1] = node
             else
@@ -88,6 +92,7 @@ function m:parseBlock(token_type, ...)
         end
 
         if self:match("break") then
+            self:match("SEMICOLON")
             if not self:tokenOneOf(self:peek(), token_type, ...) then
                 error("Break statement must be the last statement in the block")
             else
