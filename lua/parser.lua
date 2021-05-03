@@ -21,6 +21,7 @@ local m = {
 
         STAR = {prec=30, assoc='left'},
         SLASH = {prec=30, assoc='left'},
+        PRECENTAGE = {prec=30, assoc='left'},
 
         UP = {prec=40, assoc='right'}
     }
@@ -461,7 +462,7 @@ function m:parsePrimaryExpr()
     if self:match("identifier") then return {type="variable", name=self:prev().lexeme} end
     if self:match("OPEN_PAREN") then 
         local expr = self:parseExpr()
-        self:consume("CLOSE_PAREN")
+        self:consume("CLOSE_PAREN", "Expected ')' after grouping expression")
         return expr
     end
 
