@@ -23,6 +23,7 @@ function m:run(input, environment, ...)
     local tree = self.Parser:parse(tokens)
     local env = self.Interpreter:encloseEnvironment(environment)
     self.Interpreter:setEnvMeta(env, "varargs", {...})
+    env.arg = {...}
     return self.Interpreter:evaluate(tree, env)
 end
 

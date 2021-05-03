@@ -58,11 +58,14 @@ m.evals = {
 
             local varargs = {}
             if node.varargs then
+                local new_args = {}
                 if #args > #node.arg_names then
                     for i=#node.arg_names+1, #args do
                         varargs[#varargs+1] = args[i]
+                        new_args[#new_args+1] = args[i]
                     end
                 end
+                func_env.arg = new_args
             end
             self:setEnvMeta(func_env, "varargs", varargs)
 
