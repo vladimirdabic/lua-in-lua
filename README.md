@@ -2,6 +2,7 @@
 Basically, we add random stuff and fun stuff into the interpreter here :D
 
 ```lua
+-- Classes are just a fancy way to represent tables with metatables, just makes it easier.
 -- also the syntax highlighter doesn't know what to do with this LOL
 local class ExampleClass
     field number -- initialized from the constructor
