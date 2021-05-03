@@ -317,6 +317,9 @@ m.operations = {
     SLASH = function(l, r)
         return l / r
     end,
+    PRECENTAGE = function(l, r)
+        return l % r
+    end,
     UP = function(l, r)
         return l ^ r
     end,
