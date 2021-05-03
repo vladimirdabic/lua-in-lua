@@ -8,11 +8,7 @@
 - **Does it support everything from Lua?**
   - It should. It might not have a thing or two but almost everything should work just fine.
   - Unsupported things (that I know of):
-    - \u{} escape codes (utf escape code)
-    - \x00 escape codes (hexadecimal escape code)
-    - \0 escape codes (decimal escape codes)
-    - Some forms of nested strings
-    - Multiline comments
+    - Using = in multiline comments
 
 ### Usage
 ```lua
