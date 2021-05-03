@@ -116,40 +116,78 @@ end
 
 function m:parseStatement()
     if self:match("do") then return {type="do", body=self:parseBlock()} end
+    if self:match("OPEN_BRACE") then return {type="do", body=self:parseBlock("CLOSE_BRACE")} end
 
     if self:match("debugdmpenvstack") then return {type="debugdmpenvstack"} end
 
     if self:match("while") then
+        self:match('OPEN_PAREN')
         local expr = self:parseExpr()
-        self:consume("do", "Expected 'do' after while")
-        return {type="while", expr=expr, body=self:parseBlock()}
+        self:match('CLOSE_PAREN')
+
+        local close_type
+
+        if not self:match("OPEN_BRACE") then
+            self:consume("do", "Expected 'do' after while")
+            close_type = 'end'
+        else
+            close_type = 'CLOSE_BRACE'
+        end
+
+        return {type="while", expr=expr, body=self:parseBlock(close_type)}
     end
 
     if self:match("repeat") then
-        local body = self:parseBlock('until')
+        local close_type = self:match("OPEN_BRACE") and 'CLOSE_BRACE' or 'until'
+        local body = self:parseBlock(close_type)
+        if close_type == 'CLOSE_BRACE' then self:consume('until', "Expected 'until' after }") end
         --self:consume("until", "Expected 'until' after repeat body") --consumed by parseBlock
+        self:match('OPEN_PAREN')
         local expr = self:parseExpr()
+        self:match('CLOSE_PAREN')
+
         return {type="repeat", expr=expr, body=body}
     end
 
     if self:match("if") then
+        self:match('OPEN_PAREN')
         local expr = self:parseExpr()
-        self:consume("then", "Expected 'then' after if")
+        self:match('CLOSE_PAREN')
 
-        local main_body = self:parseBlock('end', 'elseif', 'else')
+        local close_type
+        if not self:match("OPEN_BRACE") then
+            self:consume("then", "Expected 'then' after if")
+            close_type = 'end'
+        else
+            close_type = 'CLOSE_BRACE'
+        end
+
+        local main_body = self:parseBlock(close_type, 'elseif', 'else')
         local clauses = {{expr=expr, body=main_body}}
         local else_body = nil
+
+        if close_type == 'CLOSE_BRACE' and self:tokenOneOf(self:peek(), 'elseif', 'else') then self:advance() end
 
         while self:tokenOneOf(self:prev(), 'elseif', 'else') do
             local ttype = self:prev().type
             local subexpr
+            local close_type_body
 
             if ttype == 'elseif' then
+                self:match('OPEN_PAREN')
                 subexpr = self:parseExpr()
-                self:consume("then", "Expected 'then' after 'elseif'")
+                self:match('CLOSE_PAREN')
             end
 
-            local body = self:parseBlock('end', 'elseif', 'else')
+            if not self:match("OPEN_BRACE") then
+                if ttype == 'elseif' then self:consume("then", "Expected 'then' after 'elseif'") end
+                close_type_body = 'end'
+            else
+                close_type_body = 'CLOSE_BRACE'
+            end
+
+            local body = self:parseBlock(close_type_body, 'elseif', 'else')
+            if close_type_body == 'CLOSE_BRACE' and self:tokenOneOf(self:peek(), 'elseif', 'else') then self:advance() end
             
             if ttype == 'elseif' then clauses[#clauses+1] = {expr=subexpr, body=body}
             elseif ttype == 'else' then else_body = body end
@@ -160,9 +198,11 @@ function m:parseStatement()
     end
 
     if self:match("for") then
+        self:match('OPEN_PAREN')
 
         -- standard for loop
         if self:peek(1).type == "EQUALS" then
+
             local var_name = self:consume("identifier", "Expected variable name after for").lexeme
             self:consume("EQUALS", "Expected '=' after variable name")
             local start = self:parseExpr()
@@ -176,9 +216,17 @@ function m:parseStatement()
                 step = {type="literal", value=1}
             end
 
-            self:consume("do", "Expected 'do' after for loop")
+            self:match('CLOSE_PAREN')
 
-            local body = self:parseBlock()
+            local close_type
+            if not self:match("OPEN_BRACE") then
+                self:consume("do", "Expected 'do' after for loop")
+                close_type = 'end'
+            else
+                close_type = 'CLOSE_BRACE'
+            end
+
+            local body = self:parseBlock(close_type)
             return {type="for", var_name=var_name, start=start, end_loop=end_loop, step=step, body=body}
         end
 
@@ -187,9 +235,18 @@ function m:parseStatement()
         self:consume("in", "Expected 'in' after for loop variable names")
 
         local exprs = self:parseExprList()
-        self:consume("do", "Expected 'do' after for loop")
 
-        local body = self:parseBlock()
+        self:match('CLOSE_PAREN')
+
+        local close_type
+        if not self:match("OPEN_BRACE") then
+            self:consume("do", "Expected 'do' after for loop")
+            close_type = 'end'
+        else
+            close_type = 'CLOSE_BRACE'
+        end
+
+        local body = self:parseBlock(close_type)
         return {type="foreach", variables=ids, expressions=exprs, body=body}
     end
 
@@ -289,7 +346,9 @@ function m:parseClass()
     local non_static_body = {}
     local constructor
 
-    while not self:match("end") do
+    local close_type = self:match("OPEN_BRACE") and 'CLOSE_BRACE' or 'end'
+
+    while not self:match(close_type) do
         -- parse class fields
         local is_static = self:match("static")
         local node
@@ -493,7 +552,9 @@ function m:parseFunctionBody()
     end
 
     self:consume("CLOSE_PAREN", "Expected ')' after function parameter definition")
-    local body = self:parseBlock()
+
+    local close_type = self:match("OPEN_BRACE") and 'CLOSE_BRACE' or 'end'
+    local body = self:parseBlock(close_type)
     body.type = 'chunk'
 
     return {type="function", arg_names=arg_names, varargs=varargs, body=body}
