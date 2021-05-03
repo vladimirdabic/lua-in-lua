@@ -64,3 +64,10 @@ print("Comment test")
     multiline comment
 ]]
 print("mcomment")
+
+
+local function test(x, ...)
+    print(x, arg[1])
+end
+
+test(2, "Hello")
