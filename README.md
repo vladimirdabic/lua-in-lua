@@ -3,7 +3,7 @@ Basically, we add random stuff and fun stuff into the interpreter here :D
 
 ```lua
 -- also the syntax highlighter doesn't know what to do with this LOL
-class ExampleClass
+local class ExampleClass
     field number -- initialized from the constructor
     static field message = "Hello World"
 
