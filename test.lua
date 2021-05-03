@@ -47,3 +47,20 @@ local tokens = luaScanner:scan("print('Hello')")
 for _, token in ipairs(tokens) do
     print(token.type, token.lexeme)
 end
+
+print("Multiline strings")
+print([[
+    Hello World
+    xd
+]])
+print([==[
+Yep
+localecategory
+xd]==])
+
+-- test
+print("Comment test")
+--[[
+    multiline comment
+]]
+print("mcomment")

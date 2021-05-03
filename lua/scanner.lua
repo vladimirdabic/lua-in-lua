@@ -9,6 +9,13 @@ local m = {
         ['+'] = function(self) self:addToken('PLUS') end,
         ['-'] = function(self)
             if self:match('-') then
+                if self:match('[') and self:match('[') then
+                    while true do
+                        if self:match(']') and self:match(']') then return end
+                        if not self:available() then return end
+                        self.current = self.current + 1
+                    end
+                end
                 while self:peek() ~= '\n' and self:available() do
                     self.current = self.current + 1
                 end
@@ -33,7 +40,7 @@ local m = {
         ['}'] = function(self) self:addToken('CLOSE_BRACE') end,
         ['('] = function(self) self:addToken('OPEN_PAREN') end,
         [')'] = function(self) self:addToken('CLOSE_PAREN') end,
-        ['['] = function(self) if self:match('[') then self:scanBigString() else self:addToken('OPEN_SQUARE') end end,
+        ['['] = function(self) if self:match('[', '=') then self:scanBigString() else self:addToken('OPEN_SQUARE') end end,
         [']'] = function(self) self:addToken('CLOSE_SQUARE') end,
         ["'"] = function(self) self:scanString("'") end,
         ['"'] = function(self) self:scanString('"') end
@@ -226,6 +233,10 @@ function m:scanString(closing_char)
     self.current = self.current + 1
     local lexeme = self.source:sub(self.start+1, self.current-2)
 
+    lexeme = lexeme:gsub("\\[0-9][0-9]?[0-9]?", function(str)
+        return string.char(str:sub(2))
+    end)
+
     lexeme = lexeme:gsub("\\.", function(str)
         local c = str:sub(2, 2)
         if self.escaped_chars[c] then
@@ -239,6 +250,16 @@ function m:scanString(closing_char)
 end
 
 function m:scanBigString()
+    local equals = self:prev() == '=' and 1 or 0
+    
+    while self:match('=') do
+        equals = equals + 1
+    end
+
+    if equals ~= 0 then
+        self:consume('[', "Expected [ to start multiline string")
+    end
+
     while self:peek() ~= ']' and self:available() do
         if self:peek() == "\\" then
             self.current = self.current + 1
@@ -246,20 +267,15 @@ function m:scanBigString()
         self.current = self.current + 1
     end
 
-    self:advance()
+    self:advance() -- consume closing ]
+
+    for _=1, equals do
+        self:consume('=', "Expected same number of = in the multiline string")
+    end
+
     self:consume(']', "Expected ']' to close multiline string")
 
-    local lexeme = self.source:sub(self.start+2, self.current-3)
-
-    lexeme = lexeme:gsub("\\.", function(str)
-        local c = str:sub(2, 2)
-        if self.escaped_chars[c] then
-            return self.escaped_chars[c]
-        else
-            return str
-        end
-    end)
-
+    local lexeme = self.source:sub(self.start+2+equals, self.current-(3+equals))
     self:addToken("string", lexeme)
 end
 
