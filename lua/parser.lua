@@ -208,43 +208,8 @@ function m:parseStatement()
     -- extended stuff
 
     if self:match("class") then
-        local class_name = self:consume("identifier", "Expected class name after 'class'").lexeme
-        local static_body = {}
-        local non_static_body = {}
-        local constructor
-
-        while not self:match("end") do
-            -- parse class definitions
-            local is_static = self:match("static")
-            local node
-
-            if self:match("field") then
-                local field_name = self:consume("identifier", "Expected field name after 'field'").lexeme
-                local initial_value
-
-                if self:match("EQUALS") then
-                    initial_value = self:parseExpr()
-                else
-                    initial_value = {type="literal", value=nil}
-                end
-
-                node = {name=field_name, value=initial_value}
-
-            elseif self:match("function") then
-                local func_name = self:consume("identifier", "Expected function name after 'function'").lexeme
-                local func_body = self:parseFunctionBody()
-
-                if func_name == "constructor" then
-                    constructor = func_body
-                else
-                    node = {name=func_name, value=func_body}
-                end
-            end
-
-            if is_static then static_body[#static_body+1] = node else non_static_body[#non_static_body+1] = node end
-        end
-
-        return {type="class", name=class_name, static_body=static_body, non_static_body=non_static_body, constructor=constructor}
+        local cls = self:parseClass()
+        return {type='assign', name=cls.name, value=cls}
     end
 
     -----------------
@@ -257,6 +222,13 @@ function m:parseStatement()
 
             return {type="declare_local", names={name}, values={func_value}}
         end
+
+        -- extended stuff
+        if self:match("class") then
+            local cls = self:parseClass()
+            return {type='declare_local', names={cls.name}, values={cls}}
+        end
+        ----
 
         local idlist = self:parseIdList()
         local init_values
@@ -308,6 +280,50 @@ function m:parseStatement()
     local init_values = self:parseExprList()
 
     return {type="assign_expr", exprs=exprs, values=init_values}
+end
+
+function m:parseClass()
+    local class_name = self:consume("identifier", "Expected class name after 'class'").lexeme
+    local static_body = {}
+    local non_static_body = {}
+    local constructor
+
+    while not self:match("end") do
+        -- parse class fields
+        local is_static = self:match("static")
+        local node
+
+        if self:match("field") then
+            local field_name = self:consume("identifier", "Expected field name after 'field'").lexeme
+            local initial_value
+
+            if self:match("EQUALS") then
+                initial_value = self:parseExpr()
+            else
+                initial_value = {type="literal", value=nil}
+            end
+
+            node = {name=field_name, value=initial_value}
+
+        elseif self:match("function") then
+            local func_name = self:consume("identifier", "Expected function name after 'function'").lexeme
+            local func_body = self:parseFunctionBody()
+
+            if func_name == "constructor" then
+                constructor = func_body
+            else
+                node = {name=func_name, value=func_body}
+            end
+        
+        elseif self:match("class") then
+            local cls = self:parseClass()
+            node = {name=cls.name, value=cls}
+        end
+
+        if is_static then static_body[#static_body+1] = node else non_static_body[#non_static_body+1] = node end
+    end
+
+    return {type="class", name=class_name, static_body=static_body, non_static_body=non_static_body, constructor=constructor}
 end
 
 function m:parseIdList()

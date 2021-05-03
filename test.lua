@@ -2,7 +2,7 @@
 
 -- classes are defined in the global scope
 -- also the syntax highlighter doesn't know what to do with this LOL
-class Test
+local class Test
     field a
     field b = "XD"
 
@@ -17,9 +17,14 @@ class Test
     function add(self, x, y)
         return x + y
     end
+
+    static class Values
+        static field msg = "Hello World"
+    end
 end
 
 
+print(Test.Values.msg)
 
 local class_inst = Test()
 print(class_inst.a)

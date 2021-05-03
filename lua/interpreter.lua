@@ -313,6 +313,7 @@ m.evals = {
 
         local mt = {
             non_static_fields = node.non_static_body,
+            class_name = node.name,
             __call = function(t, ...)
                 local instance = {}
                 local mt = getmetatable(t)
@@ -331,10 +332,7 @@ m.evals = {
         }
 
         setmetatable(class_table, mt)
-
-
-        local globals = self:getGlobal(environment)
-        globals[node.name] = class_table
+        return class_table
     end,
     ['increment'] = function(self, node, environment)
         local var = self:getFromEnv(environment, node.name)
