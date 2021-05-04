@@ -297,6 +297,11 @@ function m:parseClass()
     local static_body = {}
     local non_static_body = {}
     local constructor
+    local super_cls
+
+    if self:match('extends', 'COLON') then
+        super_cls = self:consume("identifier", "Expected class name after 'extends'").lexeme
+    end
 
     while not self:match('end') do
         -- parse class fields
@@ -333,7 +338,7 @@ function m:parseClass()
         if is_static then static_body[#static_body+1] = node else non_static_body[#non_static_body+1] = node end
     end
 
-    return {type="class", name=class_name, static_body=static_body, non_static_body=non_static_body, constructor=constructor}
+    return {type="class", name=class_name, static_body=static_body, non_static_body=non_static_body, constructor=constructor, super_cls=super_cls}
 end
 
 function m:parseEnum(is_local)

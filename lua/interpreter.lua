@@ -317,16 +317,34 @@ m.evals = {
         local mt = {
             non_static_fields = node.non_static_body,
             class_name = node.name,
+            super_class = node.super_cls,
             __call = function(t, ...)
                 local instance = {}
+                local instance_env = self:encloseEnvironment(environment)
                 local mt = getmetatable(t)
+                local super_instance
+
+                if mt.super_class then
+                    local super_cls = self:getFromEnv(environment, mt.super_class)
+
+                    if type(super_cls) ~= "function" and type(super_cls) ~= "table" then
+                        error("Superclass not a valid type")
+                    end
+
+                    super_instance = super_cls(...)
+                    instance_env.super = super_instance
+
+                    setmetatable(instance, {
+                        __index = super_instance
+                    })
+                end
 
                 for _, non_static_field in ipairs(mt.non_static_fields) do
-                    instance[non_static_field.name] = self:evaluate(non_static_field.value, environment)
+                    instance[non_static_field.name] = self:evaluate(non_static_field.value, instance_env)
                 end
 
                 if node.constructor then
-                    local constructor = self:evaluate(node.constructor, environment)
+                    local constructor = self:evaluate(node.constructor, instance_env)
                     constructor(instance, ...)
                 end
 

@@ -1,6 +1,11 @@
 
+
+local class Test2
+    field wow = "Test"
+end
+
 -- classes are defined in the global scope if you don't specify that they're local
-local class Test
+local class Test extends Test2
     field a
     field b = "XD"
 
@@ -37,6 +42,7 @@ print(Test.Values.msg)
 local class_inst = Test()
 print(class_inst.a)
 print(class_inst.b)
+print(class_inst.wow)
 
 Test.say("Lol")
 print(class_inst:add(2, 2))
