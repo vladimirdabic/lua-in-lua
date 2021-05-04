@@ -335,6 +335,7 @@ function m:parseClass()
             node = {name=cls.name, value=cls}
         end
 
+        self:match('SEMICOLON')
         if is_static then static_body[#static_body+1] = node else non_static_body[#non_static_body+1] = node end
     end
 
