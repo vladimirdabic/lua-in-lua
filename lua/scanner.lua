@@ -286,35 +286,36 @@ end
 
 function m:scanHashtag()
     -- preprocessor
-    if self:match('#') and self:match('[') then
+    if self:match('#') then
+        if self:match('[') then
+            local closing_chars = {']'}
 
-        local closing_chars = {']'}
-
-        while self:match('=') do
-            closing_chars[#closing_chars+1] = '='
-        end
-
-        self:consume('[', "Expected '[' to start preprocessor code")
-        closing_chars[#closing_chars+1] = ']'
-
-        local lua_string = ""
-        local matched_end = false
-        while self:available() do
-            if self:matchMultiple(unpack(closing_chars)) then
-                matched_end = true
-                break
+            while self:match('=') do
+                closing_chars[#closing_chars+1] = '='
             end
-            local c = self:advance()
-            if c == '\n' then self.line = self.line + 1 end
-            lua_string = lua_string .. c
-        end
 
-        if not matched_end then
-            error("[Line " .. self.line .. "] Unterminated preprocessor block")
-        end
+            self:consume('[', "Expected '[' to start preprocessor code")
+            closing_chars[#closing_chars+1] = ']'
 
-        self:addToken('PREPROCESSOR', lua_string)
-        return
+            local lua_string = ""
+            local matched_end = false
+            while self:available() do
+                if self:matchMultiple(unpack(closing_chars)) then
+                    matched_end = true
+                    break
+                end
+                local c = self:advance()
+                if c == '\n' then self.line = self.line + 1 end
+                lua_string = lua_string .. c
+            end
+
+            if not matched_end then
+                error("[Line " .. self.line .. "] Unterminated preprocessor block")
+            end
+
+            self:addToken('PREPROCESSOR', lua_string)
+            return
+        end
     end
 
     self:addToken('HASHTAG')

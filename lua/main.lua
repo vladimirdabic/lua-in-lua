@@ -1,7 +1,8 @@
 local m = {
     Scanner = require("lua.scanner"),
     Parser = require("lua.parser"),
-    Interpreter = require("lua.interpreter")
+    Interpreter = require("lua.interpreter"),
+    Preprocessor = require("lua.preprocessor")
 }
 
 
@@ -19,6 +20,7 @@ end
 ---@param environment table
 ---@return any
 function m:run(input, environment, ...)
+    input = self.Preprocessor:process(input)
     local tokens = self.Scanner:scan(input)
     local tree = self.Parser:parse(tokens, self.Interpreter)
     local env = self.Interpreter:encloseEnvironment(environment)
