@@ -313,8 +313,6 @@ function m:scanHashtag()
             error("[Line " .. self.line .. "] Unterminated preprocessor block")
         end
 
-        print(lua_string)
-
         self:addToken('PREPROCESSOR', lua_string)
         return
     end

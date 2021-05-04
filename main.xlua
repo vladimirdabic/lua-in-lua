@@ -1,2 +1,10 @@
-local token = require 'token'
-local test = token.Token(token.TokenType.PLUS, '+', nil, 1)
+
+
+
+##[[
+print("This is preprocessor yes")
+]]
+
+
+
+print("Yo")

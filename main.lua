@@ -31,7 +31,7 @@ local env = {
 env._G = env
 env.require = function(fpath)
     local fpath = fpath:gsub("%.", "/")
-    local f = io.open(fpath .. ".lua", "r")
+    local f = io.open(fpath .. ".xlua", "r")
     local code = f:read("*a")
     f:close()
 
@@ -58,4 +58,4 @@ env.dofile = function(fpath)
     return ret
 end
 
-lua:dofile("test.xlua", env)
+lua:dofile(arg[1], env)
