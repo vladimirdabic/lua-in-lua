@@ -435,10 +435,12 @@ function m:parseTableConstructor()
     local fields = {}
 
     if not self:check("CLOSE_BRACE") then
-        while true do
+        while not self:check('CLOSE_BRACE') do
             fields[#fields+1] = self:parseTableField()
-            if not (self:match('COMMA') or self:match('SEMICOLON')) then break end
-            if self:check("CLOSE_BRACE") then break end
+
+            if not self:check('CLOSE_BRACE') then
+                self:consumeOneOf("Expected ',' or ';' after table field value", 'COMMA', 'SEMICOLON')
+            end
         end
     end
 
@@ -503,6 +505,16 @@ end
 function m:consume(token_type, err)
     if self:check(token_type) then return self:advance() end
     error("[Line " .. self:peek().line .. "] ".. err ..'\n'..self:peek().type) 
+end
+
+function m:consumeOneOf(err, ...)
+    local types = {...}
+
+    for _, token_type in ipairs(types) do
+        if self:check(token_type) then return self:advance() end
+    end
+
+    error("[Line " .. self:peek().line .. "] ".. err ..'\n'..self:peek().type)
 end
 
 function m:peek(offset)
