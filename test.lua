@@ -1,5 +1,4 @@
 
-
 -- classes are defined in the global scope
 -- also the syntax highlighter doesn't know what to do with this LOL
 local class Test
