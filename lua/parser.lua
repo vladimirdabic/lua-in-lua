@@ -26,7 +26,7 @@ local m = {
         UP = {prec=40, assoc='right'}
     },
 
-    temp_rules = nil,
+    custom_rules = {},
     interpreter_instance = nil,
     preprocessor_env = nil,
     preprocessor_env_defaults = {
@@ -70,7 +70,6 @@ function m:parse(tokens, interpreter_instance)
     self.current = 1
     self.line = 1
     self.tokens = tokens
-    self.temp_rules = {}
     self.interpreter_instance = interpreter_instance
     self.preprocessor_env = setmetatable({
         parser=self,
@@ -175,7 +174,7 @@ end
 
 
 function m:parseStatement()
-    local custom = self:parseTempRules('statement')
+    local custom = self:parseCustomRules('statement')
     if custom then return custom end
 
     if self:match("PREPROCESSOR") then
@@ -566,7 +565,7 @@ function m:parseArgs()
 end
 
 function m:parsePrimaryExpr()
-    local custom = self:parseTempRules('expression')
+    local custom = self:parseCustomRules('expression')
     if custom then return custom end
 
     if self:match("nil") then return {type="literal", value=nil} end
@@ -767,13 +766,13 @@ function m:advance()
     return token
 end
 
-function m:parseTempRules(category)
-    if not self.temp_rules[category] then
+function m:parseCustomRules(category)
+    if not self.custom_rules[category] then
         return false
     end
 
     local start = self.current
-    for _, v in ipairs(self.temp_rules[category]) do
+    for _, v in ipairs(self.custom_rules[category]) do
         local res = v(self)
         if res then
             return res
@@ -785,10 +784,10 @@ function m:parseTempRules(category)
 end
 
 function m:addRule(category, func)
-    if not self.temp_rules[category] then
-        self.temp_rules[category] = {func}
+    if not self.custom_rules[category] then
+        self.custom_rules[category] = {func}
     else
-        self.temp_rules[category][#self.temp_rules[category]+1] = func
+        self.custom_rules[category][#self.custom_rules[category]+1] = func
     end
 end
 
