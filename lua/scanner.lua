@@ -286,11 +286,21 @@ end
 
 function m:scanHashtag()
     -- preprocessor
-    if self:match('#') and self:match('[') and self:match('[') then
+    if self:match('#') and self:match('[') then
+
+        local closing_chars = {']'}
+
+        while self:match('=') do
+            closing_chars[#closing_chars+1] = '='
+        end
+
+        self:consume('[', "Expected '[' to start preprocessor code")
+        closing_chars[#closing_chars+1] = ']'
+
         local lua_string = ""
         local matched_end = false
         while self:available() do
-            if self:matchMultiple(']', ']') then
+            if self:matchMultiple(unpack(closing_chars)) then
                 matched_end = true
                 break
             end
@@ -302,6 +312,8 @@ function m:scanHashtag()
         if not matched_end then
             error("[Line " .. self.line .. "] Unterminated preprocessor block")
         end
+
+        print(lua_string)
 
         self:addToken('PREPROCESSOR', lua_string)
         return
