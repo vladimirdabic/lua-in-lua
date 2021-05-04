@@ -58,3 +58,59 @@ num *= 5
 print(num)
 num /= 5
 print(num)
+
+
+
+##[[
+-- Define a custom rule in the preprocessor
+print("preprocessor")
+
+parser:addRule('statement', function(self)
+    if self:match('if') and self:match('OPEN_PAREN') then
+        local expr = self:parseExpr()
+        self:consume('CLOSE_PAREN', "Expected ')' after C style if statement")
+        self:consume('OPEN_BRACE', "Expected '{' after C style if statement")
+
+        local body = self:parseBlock('CLOSE_BRACE')
+        return {type='cif', expr=expr, body=body}
+    end
+end)
+
+-- if using getTree, interpreter is not passed
+-- be careful as the custom evaluators aren't reset, they will still be there after you run code later
+-- on the other hand, the rules are reset, so you always have to redefine the rules
+if interpreter then
+    interpreter.evals['cif'] = function(self, node, environment)
+        local value = self:evaluate(node.expr, environment)
+
+        if value then
+            local new_env = self:encloseEnvironment(environment)
+            self:evaluate(node.body, new_env)
+        end
+    end
+end
+]]
+
+-- now works
+if(true) {
+    print("C Style if wow")
+}
+
+local a = ##[[ return get_call(variable('class_inst'), 'add', literal(2), literal(2)) ]]
+print("Node generated from preprocessor: " .. a)
+
+
+-- how to achieve #define like in C
+##[[
+if not defined_thing then
+    print("This isn't defined, it is now though")
+    defined_thing = true
+end
+]]
+
+-- seperate preprocessor block
+##[[
+if not defined_thing then
+    print("This shouldn't appear")
+end
+]]

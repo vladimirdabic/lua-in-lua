@@ -20,7 +20,7 @@ end
 ---@return any
 function m:run(input, environment, ...)
     local tokens = self.Scanner:scan(input)
-    local tree = self.Parser:parse(tokens)
+    local tree = self.Parser:parse(tokens, self.Interpreter)
     local env = self.Interpreter:encloseEnvironment(environment)
     self.Interpreter:setEnvMeta(env, "varargs", {...})
     env.arg = {...}

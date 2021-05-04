@@ -35,7 +35,7 @@ local m = {
         ['>'] = function(self) self:addToken(self:match('=') and 'GREATER_EQUAL' or 'GREATER') end,
         ['='] = function(self) self:addToken(self:match('=') and 'DOUBLE_EQUALS' or 'EQUALS') end,
         ['~'] = function(self) self:addToken(self:match('=') and 'NOT_EQUAL' or 'TILDA') end,
-        ['#'] = function(self) self:addToken('HASHTAG') end,
+        ['#'] = function(self) self:scanHashtag() end,
         ['{'] = function(self) self:addToken('OPEN_BRACE') end,
         ['}'] = function(self) self:addToken('CLOSE_BRACE') end,
         ['('] = function(self) self:addToken('OPEN_PAREN') end,
@@ -284,6 +284,32 @@ function m:scanBigString()
     self:addToken("string", lexeme)
 end
 
+function m:scanHashtag()
+    -- preprocessor
+    if self:match('#') and self:match('[') and self:match('[') then
+        local lua_string = ""
+        local matched_end = false
+        while self:available() do
+            if self:matchMultiple(']', ']') then
+                matched_end = true
+                break
+            end
+            local c = self:advance()
+            if c == '\n' then self.line = self.line + 1 end
+            lua_string = lua_string .. c
+        end
+
+        if not matched_end then
+            error("[Line " .. self.line .. "] Unterminated preprocessor block")
+        end
+
+        self:addToken('PREPROCESSOR', lua_string)
+        return
+    end
+
+    self:addToken('HASHTAG')
+end
+
 function m:isDigit(c)
     return c:match("[0-9]")
 end
@@ -300,9 +326,10 @@ function m:isAlphaNumeric(c)
     return c:match("[a-zA-Z_0-9]")
 end
 
-function m:peek()
-    if not self:available() then return '\0' end
-    return self.source:sub(self.current, self.current)
+function m:peek(offset)
+    offset = offset or 0
+    if self.current+offset > #self.source then return '\0' end
+    return self.source:sub(self.current+offset, self.current+offset)
 end
 
 function m:prev()
@@ -322,10 +349,27 @@ function m:match(...)
             return true
         end
     end
-    
+
     return false
 end
 
+function m:matchMultiple(...)
+    local chars = {...}
+
+    local found = 0
+    for i, c in ipairs(chars) do
+        if self:peek(i-1) == c then
+            found = found + 1
+        end
+    end
+
+    if found == #chars then
+        self.current = self.current + found
+        return true
+    end
+
+    return false
+end
 
 function m:available()
     return self.current <= #self.source

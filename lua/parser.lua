@@ -24,17 +24,58 @@ local m = {
         PRECENTAGE = {prec=30, assoc='left'},
 
         UP = {prec=40, assoc='right'}
+    },
+
+    temp_rules = nil,
+    interpreter_instance = nil,
+    preprocessor_env = nil,
+    preprocessor_env_defaults = {
+        multiple = function(...)
+            local nodes = {...}
+            return setmetatable(nodes, {__multiple=true})
+        end,
+        literal = function(v)
+            return {type='literal', value=v}
+        end,
+        variable = function(name)
+            return {type='variable', name=name}
+        end,
+        call = function(callee, ...)
+            return {type='call', callee=callee, args={...}}
+        end,
+        declare_local = function(names, ...)
+            return {type='declare_local', names=names, values={...}}
+        end,
+        get = function(from, index)
+            return {type='get', from=from, index=index}
+        end,
+        get_call = function(callee, index, ...)
+            return {type='get_call', callee=callee, index=index, args={...}}
+        end,
+        set = function(in_value, index, value)
+            return {type='set', in_value=in_value, index=index, value=value}
+        end,
+        assign_expr = function(exprs, ...)
+            return {type='declare_local', exprs=exprs, values={...}}
+        end
     }
 }
 
 
 ---Parses tokens and returns a tree
 ---@param tokens table "Array table of tokens"
+---@param interpreter_instance? table "OPTIONAL: Interpreter instance"
 ---@return table "Tree"
-function m:parse(tokens)
+function m:parse(tokens, interpreter_instance)
     self.current = 1
     self.line = 1
     self.tokens = tokens
+    self.temp_rules = {}
+    self.interpreter_instance = interpreter_instance
+    self.preprocessor_env = setmetatable({
+        parser=self,
+        interpreter=self.interpreter_instance
+    }, {__index=setmetatable(self.preprocessor_env_defaults, {__index=_G})})
 
     return self:parseChunk()
 end
@@ -62,7 +103,17 @@ function m:parseChunk()
 
         if not parsed then
             self.line = self:peek().line
-            statements[#statements+1] = self:parseStatement()
+            --statements[#statements+1] = self:parseStatement()
+            local statement_return = self:parseStatement()
+
+            local mt = getmetatable(statement_return)
+            if mt and mt.__multiple then
+                for _, statement in ipairs(statement_return) do
+                    statements[#statements+1] = statement
+                end
+            else
+                statements[#statements+1] = statement_return
+            end
         end
 
         self:match("SEMICOLON")
@@ -104,7 +155,16 @@ function m:parseBlock(token_type, ...)
 
         if not parsed then
             self.line = self:peek().line
-            statements[#statements+1] = self:parseStatement()
+            local statement_return = self:parseStatement()
+
+            local mt = getmetatable(statement_return)
+            if mt and mt.__multiple then
+                for _, statement in ipairs(statement_return) do
+                    statements[#statements+1] = statement
+                end
+            else
+                statements[#statements+1] = statement_return
+            end
         end
 
         self:match("SEMICOLON")
@@ -115,6 +175,16 @@ end
 
 
 function m:parseStatement()
+    local custom = self:parseTempRules('statement')
+    if custom then return custom end
+
+    if self:match("PREPROCESSOR") then
+        local lua_str = self:prev().literal
+        local f = assert(loadstring(lua_str), "Failed to load preprocessor block from line " .. self:prev().line)
+        setfenv(f, self.preprocessor_env)
+        return f()
+    end
+
     if self:match("do") then return {type="do", body=self:parseBlock()} end
 
     if self:match("debugdmpenvstack") then return {type="debugdmpenvstack"} end
@@ -496,6 +566,9 @@ function m:parseArgs()
 end
 
 function m:parsePrimaryExpr()
+    local custom = self:parseTempRules('expression')
+    if custom then return custom end
+
     if self:match("nil") then return {type="literal", value=nil} end
     if self:match("string") then return {type="literal", value=self:prev().literal} end
     if self:match("number") then return {type="literal", value=self:prev().literal} end
@@ -515,6 +588,13 @@ function m:parsePrimaryExpr()
     if self:match("MINUS") then return {type="uminus", value=self:parseBinOp(40)} end
     if self:match("HASHTAG") then return {type="get_length", value=self:parseBinOp(40)} end
     if self:match("VARARGS") then return {type="varargs"} end
+
+    if self:match("PREPROCESSOR") then
+        local lua_str = self:prev().literal
+        local f = assert(loadstring(lua_str), "Failed to load preprocessor block from line " .. self:prev().line)
+        setfenv(f, self.preprocessor_env)
+        return f()
+    end
 
     print(self:peek().type)
     error("Expected expression")
@@ -631,6 +711,42 @@ function m:consumeOneOf(err, ...)
     error("[Line " .. self:peek().line .. "] ".. err ..'\n'..self:peek().type)
 end
 
+function m:matchMultiple(...)
+    local types = {...}
+
+    local found = 0
+    for i, token_type in ipairs(types) do
+        if self:peek(i-1).type == token_type then
+            found = found + 1
+        end
+    end
+
+    if found == #types then
+        self.current = self.current + found
+    end
+
+    return false
+end
+
+function m:matchIdentifiers(...)
+    local ids = {...}
+
+    local matched = 0
+    for i, id in ipairs(ids) do
+        if self:peek(i-1).type ~= 'identifier' then return false end
+        if self:peek(i-1).lexeme ~= id then return false end
+
+        matched = matched + 1
+    end
+
+    if matched == #ids then
+        self.current = self.current + matched
+        return true
+    end
+
+    return false
+end
+
 function m:peek(offset)
     local offset = offset or 0
     if self.current+offset > #self.tokens then return {type="EOF"} end
@@ -649,6 +765,31 @@ function m:advance()
     local token = self.tokens[self.current]
     self.current = self.current + 1
     return token
+end
+
+function m:parseTempRules(category)
+    if not self.temp_rules[category] then
+        return false
+    end
+
+    local start = self.current
+    for _, v in ipairs(self.temp_rules[category]) do
+        local res = v(self)
+        if res then
+            return res
+        end
+        self.current = start
+    end
+
+    return false
+end
+
+function m:addRule(category, func)
+    if not self.temp_rules[category] then
+        self.temp_rules[category] = {func}
+    else
+        self.temp_rules[category][#self.temp_rules[category]+1] = func
+    end
 end
 
 
