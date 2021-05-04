@@ -1,5 +1,5 @@
 
--- classes are defined in the global scope
+-- classes are defined in the global scope if you don't specify that they're local
 -- also the syntax highlighter doesn't know what to do with this LOL
 local class Test
     field a
