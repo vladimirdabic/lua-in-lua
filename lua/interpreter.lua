@@ -355,7 +355,7 @@ m.evals = {
         setmetatable(class_table, mt)
         return class_table
     end,
-    ['increment'] = function(self, node, environment)
+    iPLUS_EQ = function(self, node, environment)
         local var = self:getFromEnv(environment, node.name)
         if var == nil then
             error("Undefined variable " .. node.name .. " used in increment")
@@ -366,7 +366,7 @@ m.evals = {
 
         self:setInEnv(environment, node.name, new_value)
     end,
-    ['decrement'] = function(self, node, environment)
+    iMINUS_EQ = function(self, node, environment)
         local var = self:getFromEnv(environment, node.name)
         if var == nil then
             error("Undefined variable " .. node.name .. " used in decrement")
@@ -374,6 +374,28 @@ m.evals = {
 
         local value = self:evaluate(node.value, environment)
         local new_value = var - value
+
+        self:setInEnv(environment, node.name, new_value)
+    end,
+    iSTAR_EQ = function(self, node, environment)
+        local var = self:getFromEnv(environment, node.name)
+        if var == nil then
+            error("Undefined variable " .. node.name .. " used in decrement")
+        end
+
+        local value = self:evaluate(node.value, environment)
+        local new_value = var * value
+
+        self:setInEnv(environment, node.name, new_value)
+    end,
+    iSLASH_EQ = function(self, node, environment)
+        local var = self:getFromEnv(environment, node.name)
+        if var == nil then
+            error("Undefined variable " .. node.name .. " used in decrement")
+        end
+
+        local value = self:evaluate(node.value, environment)
+        local new_value = var / value
 
         self:setInEnv(environment, node.name, new_value)
     end

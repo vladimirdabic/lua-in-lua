@@ -254,12 +254,12 @@ function m:parseStatement()
     end
 
 
-    if self:tokenOneOf(self:peek(1), "PLUS_EQ", "MINUS_EQ") then
+    if self:tokenOneOf(self:peek(1), "PLUS_EQ", "MINUS_EQ", "STAR_EQ", "SLASH_EQ") then
         local var_name = self:consume("identifier", "Expected variable name before " .. self:peek(1).lexeme).lexeme
         local operator = self:advance()
         local expr = self:parseExpr()
 
-        return {type=operator.type == "PLUS_EQ" and "increment" or "decrement", name=var_name, value=expr}
+        return {type='i'..operator.type, name=var_name, value=expr}
     end
 
 

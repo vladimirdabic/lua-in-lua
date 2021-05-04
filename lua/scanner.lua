@@ -23,8 +23,8 @@ local m = {
                 self:addToken(self:match('=') and 'MINUS_EQ' or 'MINUS')
             end
         end,
-        ['*'] = function(self) self:addToken('STAR') end,
-        ['/'] = function(self) self:addToken('SLASH') end,
+        ['*'] = function(self) self:addToken(self:match('=') and 'STAR_EQ' or 'STAR') end,
+        ['/'] = function(self) self:addToken(self:match('=') and 'SLASH_EQ' or 'SLASH') end,
         ['^'] = function(self) self:addToken('UP') end,
         ['%'] = function(self) self:addToken('PRECENTAGE') end,
         ['.'] = function(self) self:addToken(self:match('.') and (self:match('.') and 'VARARGS' or 'CONCAT') or 'DOT') end,

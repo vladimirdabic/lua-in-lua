@@ -1,0 +1,25 @@
+
+local enum TokenType
+    PLUS, MINUS, STAR, SLASH,
+    EOF
+end
+
+local class Token
+    field type
+    field literal
+    field line
+    field lexeme
+
+    function constructor(self, token_type, literal, lexeme, line)
+        self.type = token_type
+        self.literal = literal
+        self.lexeme = lexeme
+        self.line = line
+    end
+end
+
+
+return {
+    Token = Token,
+    TokenType = TokenType
+}
