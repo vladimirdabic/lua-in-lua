@@ -22,7 +22,17 @@ local class Test
     end
 end
 
+local enum TestEnum
+    FIRST, SECOND,
+    MESSAGE = "Hello World";
+    THIRD
+end
 
+
+print(TestEnum.FIRST)
+print(TestEnum.SECOND)
+print(TestEnum.THIRD)
+print(TestEnum.MESSAGE)
 print(Test.Values.msg)
 
 local class_inst = Test()

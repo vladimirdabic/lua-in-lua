@@ -214,6 +214,10 @@ function m:parseStatement()
         return {type='assign', name=cls.name, value=cls}
     end
 
+    if self:match("enum") then
+        return self:parseEnum(false)
+    end
+
     -----------------
 
     if self:match("local") then
@@ -229,6 +233,10 @@ function m:parseStatement()
         if self:match("class") then
             local cls = self:parseClass()
             return {type='declare_local', names={cls.name}, values={cls}}
+        end
+
+        if self:match("enum") then
+            return self:parseEnum(true)
         end
         ----
 
@@ -326,6 +334,36 @@ function m:parseClass()
     end
 
     return {type="class", name=class_name, static_body=static_body, non_static_body=non_static_body, constructor=constructor}
+end
+
+function m:parseEnum(is_local)
+    local enum_name = self:consume("identifier", "Expected enum name after 'enum'").lexeme
+    local body = {}
+
+    local enum_id = 1
+    while not self:match('end') do
+        local id = self:consume("identifier", "Expected enum field in enum body").lexeme
+        local enum_val
+
+        if self:match('EQUALS') then
+            enum_val = self:parseExpr()
+        else
+            enum_val = {type="literal", value=enum_id}
+            enum_id = enum_id + 1
+        end
+
+        if not self:check('end') then
+            self:consumeOneOf("Expected ',' or ';' after enum field", 'COMMA', 'SEMICOLON')
+        end
+
+        body[#body+1] = {key={type='literal', value=id}, value=enum_val}
+    end
+
+    if is_local then
+        return {type="declare_local", names={enum_name}, values={{type="table", fields=body}}}
+    else
+        return {type="assign_expr", exprs={{type='variable', name=enum_name}}, values={{type="table", fields=body}}}
+    end
 end
 
 function m:parseIdList()
@@ -505,10 +543,12 @@ function m:parseTableConstructor()
     local fields = {}
 
     if not self:check("CLOSE_BRACE") then
-        while true do
+        while not self:check('CLOSE_BRACE') do
             fields[#fields+1] = self:parseTableField()
-            if not (self:match('COMMA') or self:match('SEMICOLON')) then break end
-            if self:check("CLOSE_BRACE") then break end
+
+            if not self:check('CLOSE_BRACE') then
+                self:consumeOneOf("Expected ',' or ';' after table field value", 'COMMA', 'SEMICOLON')
+            end
         end
     end
 
@@ -573,6 +613,16 @@ end
 function m:consume(token_type, err)
     if self:check(token_type) then return self:advance() end
     error("[Line " .. self:peek().line .. "] ".. err ..'\n'..self:peek().type) 
+end
+
+function m:consumeOneOf(err, ...)
+    local types = {...}
+
+    for _, token_type in ipairs(types) do
+        if self:check(token_type) then return self:advance() end
+    end
+
+    error("[Line " .. self:peek().line .. "] ".. err ..'\n'..self:peek().type)
 end
 
 function m:peek(offset)

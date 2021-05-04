@@ -58,4 +58,4 @@ env.dofile = function(fpath)
     return ret
 end
 
-lua:dofile("test.lua", env)
+lua:dofile("test.xlua", env)

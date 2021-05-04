@@ -65,6 +65,7 @@ local m = {
         ["static"] = true,
         ["field"] = true,
         ["class"] = true,
+        ["enum"] = true,
         ["nil"] = true,
         ["and"] = true,
         ["or"] = true,
