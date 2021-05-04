@@ -30,10 +30,6 @@ function m:processStr(str, ctx)
         end
     end
 
-    if is_other then
-        return {once}
-    end
-
     return new
 end
 
